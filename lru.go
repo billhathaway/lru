@@ -16,6 +16,7 @@ type lru struct {
 	hits    uint
 	misses  uint
 	expired uint
+	removes uint
 	logger  *log.Logger
 }
 
@@ -25,6 +26,7 @@ type Stats struct {
 	Limit   uint
 	Len     uint
 	Expired uint
+	Removes uint
 }
 
 type cacheEntry struct {
@@ -96,14 +98,27 @@ func (l *lru) Get(key string) (interface{}, bool) {
 	return nil, false
 }
 
+// Remove removes a key, returning true if the key was found, false if it was not
+func (l *lru) Remove(key string) bool {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.removes++
+	if entry, found := l.data[key]; found {
+		l.list.Remove(entry)
+		delete(l.data, key)
+		return true
+	}
+	return false
+}
+
 // SetLogger sets the logger.  There is currently only a single log statement in the package.
 func (l *lru) SetLogger(logger *log.Logger) {
 	l.logger = logger
 }
 
-// Stats returns a stats structure containing information on the cache hits, misses, max size, current size, and expired entries
+// Stats returns a stats structure containing information on the cache hits, misses, max size, current size, expired entries, and entries removed
 func (l *lru) Stats() Stats {
-	return Stats{l.hits, l.misses, l.limit, uint(l.list.Len()), l.expired}
+	return Stats{l.hits, l.misses, l.limit, uint(l.list.Len()), l.expired, l.removes}
 }
 
 // ResetStats resets the hit,misses, and expired counters
@@ -113,6 +128,7 @@ func (l *lru) ResetStats() {
 	l.hits = 0
 	l.misses = 0
 	l.expired = 0
+	l.removes = 0
 
 }
 

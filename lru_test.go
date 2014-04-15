@@ -91,6 +91,54 @@ func Test_update(t *testing.T) {
 	assert.Equal(t, l.Len(), 2)
 }
 
+func Test_removeFound(t *testing.T) {
+	l, err := New(10)
+	assert.Nil(t, err)
+
+	l.Set("key1", "val1")
+	l.Set("key2", "val2")
+	l.Set("key3", "val3")
+	found := l.Remove("key2")
+	assert.True(t, found)
+	assert.Equal(t, len(l.data), 2)
+	assert.Equal(t, l.list.Len(), 2)
+}
+
+func Test_removeNotFound(t *testing.T) {
+	l, err := New(10)
+	assert.Nil(t, err)
+
+	l.Set("key1", "val1")
+	l.Set("key2", "val2")
+	l.Set("key3", "val3")
+	found := l.Remove("key4")
+	assert.False(t, found)
+	assert.Equal(t, len(l.data), 3)
+	assert.Equal(t, l.list.Len(), 3)
+}
+
+func Test_listOrdering(t *testing.T) {
+	l, err := New(10)
+	assert.Nil(t, err)
+
+	l.Set("a", "a") // list is a
+	l.Set("b", "b") // list is now b,a
+	l.Set("c", "c") // list is now c,b,a
+	assert.Equal(t, l.list.Back().Value.(cacheEntry).value, "a")
+	assert.Equal(t, l.list.Front().Value.(cacheEntry).value, "c")
+
+	val, found := l.Get("a") // list is now a,c,b
+	assert.True(t, found)
+	assert.Equal(t, val, "a")
+	assert.Equal(t, l.list.Front().Value.(cacheEntry).value, "a")
+	assert.Equal(t, l.list.Back().Value.(cacheEntry).value, "b")
+
+	found = l.Remove("a") // list is now c,b
+	assert.True(t, found)
+	assert.Equal(t, l.list.Front().Value.(cacheEntry).value, "c")
+	assert.Equal(t, l.list.Back().Value.(cacheEntry).value, "b")
+}
+
 func Benchmark_insertExpire(b *testing.B) {
 	l, _ := New(10)
 	for i := 0; i < b.N; i++ {
