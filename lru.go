@@ -32,8 +32,8 @@ type cacheEntry struct {
 	value interface{}
 }
 
-// NewLru creates a new LRU cache
-func NewLru(limit uint) (*lru, error) {
+// New creates a new LRU cache
+func New(limit uint) (*lru, error) {
 	if limit == 0 {
 		return nil, errors.New("limit must be positive")
 	}

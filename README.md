@@ -1,9 +1,12 @@
-// lru project doc.go
-
-/*
-lru implements a LRU cache with a map for storing data and a list for maintaining order
+Implements a LRU cache for string keys and interface{} values
+==
 
 Example:
+--
+```
+import "github.com/billhathaway/lru"
+import "fmt" 
+
 cache := lru.New(1000)
 cache.put("key1","value1")
 cache.put("key2",789)
@@ -16,5 +19,4 @@ if found {
 } else {
 	fmt.Printf("key %s not found\n",key)
 }
-*/
-package lru
+```

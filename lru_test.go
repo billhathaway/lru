@@ -8,8 +8,10 @@ import (
 	"testing"
 )
 
+// keys is used to pre-allocate a large array of strings used in a lot of tests
 var keys []string
 
+// init performs the allocation of keys
 func init() {
 	keys = make([]string, 5000000)
 	for i := 0; i < 5000000; i++ {
@@ -19,7 +21,7 @@ func init() {
 
 // Test_simpleFoundCase verifies that a key,value set will be returned correctly
 func Test_simpleFoundCase(t *testing.T) {
-	l, err := NewLru(10)
+	l, err := New(10)
 	assert.Nil(t, err)
 	l.Set("a", "b")
 	val, found := l.Get("a")
@@ -29,7 +31,7 @@ func Test_simpleFoundCase(t *testing.T) {
 
 // Test_simpleNotFoundCase verifies that the bool returned is false when the key isn't found
 func Test_simpleNotFoundCase(t *testing.T) {
-	l, err := NewLru(10)
+	l, err := New(10)
 	assert.Nil(t, err)
 	_, found := l.Get("a")
 	assert.False(t, found)
@@ -38,7 +40,7 @@ func Test_simpleNotFoundCase(t *testing.T) {
 // Test_simpleExpireCase verifies that with a limit of N entries, the first entry will be expired once N additional entries are added
 func Test_simpleExpireCase(t *testing.T) {
 	size := 10
-	l, err := NewLru(uint(size))
+	l, err := New(uint(size))
 	assert.Nil(t, err)
 
 	l.Set("willExpire", "test")
@@ -61,7 +63,7 @@ func Test_simpleExpireCase(t *testing.T) {
 
 // Test_hitRate verifies that hitrate is calculated correctly
 func Test_hitRate(t *testing.T) {
-	l, err := NewLru(10)
+	l, err := New(10)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 0.0, l.HitRate())
@@ -75,7 +77,7 @@ func Test_hitRate(t *testing.T) {
 }
 
 func Test_update(t *testing.T) {
-	l, err := NewLru(10)
+	l, err := New(10)
 	assert.Nil(t, err)
 
 	prev := l.Set("a", "initialValue")
@@ -90,20 +92,20 @@ func Test_update(t *testing.T) {
 }
 
 func Benchmark_insertExpire(b *testing.B) {
-	l, _ := NewLru(10)
+	l, _ := New(10)
 	for i := 0; i < b.N; i++ {
 		l.Set(keys[i%len(keys)], 100)
 	}
 }
 
 func Benchmark_insertNoExpire(b *testing.B) {
-	l, _ := NewLru(10000000)
+	l, _ := New(10000000)
 	for i := 0; i < b.N; i++ {
 		l.Set(keys[i%len(keys)], 100)
 	}
 }
 func Benchmark_GetFound(b *testing.B) {
-	l, _ := NewLru(uint(b.N))
+	l, _ := New(uint(b.N))
 	for i := 0; i < b.N; i++ {
 		l.Set(keys[i%len(keys)], 100)
 	}
@@ -113,7 +115,7 @@ func Benchmark_GetFound(b *testing.B) {
 	}
 }
 func Benchmark_GetNotFound(b *testing.B) {
-	l, _ := NewLru(uint(b.N))
+	l, _ := New(uint(b.N))
 	for i := 0; i < b.N; i++ {
 		l.Set(keys[i%len(keys)], 100)
 	}
@@ -132,7 +134,7 @@ func lruReader(count int, l *lru, wg *sync.WaitGroup) {
 }
 
 func Benchmark_getMultiGoRoutines(b *testing.B) {
-	l, _ := NewLru(uint(b.N))
+	l, _ := New(uint(b.N))
 	for i := 0; i < b.N; i++ {
 		l.Set(keys[i], 100)
 	}
