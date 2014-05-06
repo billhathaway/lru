@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -16,6 +17,30 @@ func init() {
 	keys = make([]string, 5000000)
 	for i := 0; i < 5000000; i++ {
 		keys[i] = strconv.Itoa(i)
+	}
+}
+
+func (pt *PurgeTester) OnPurge(key string, value interface{}) {
+	pt.count = atomic.AddInt64(&pt.count, 1)
+}
+
+type PurgeTester struct {
+	count int64
+}
+
+func TestPurge(t *testing.T) {
+	p := &PurgeTester{}
+	l, err := New(uint(1))
+	assert.Nil(t, err)
+
+	l.RegisterPurger(p)
+
+	for i := 0; i < 1000; i++ {
+		l.Set(strconv.Itoa(i), nil)
+	}
+
+	if p.count != 999 {
+		t.Error("count not match", p.count)
 	}
 }
 
@@ -174,7 +199,7 @@ func Benchmark_GetNotFound(b *testing.B) {
 	}
 }
 
-func lruReader(count int, l *lru, wg *sync.WaitGroup) {
+func lruReader(count int, l *Cache, wg *sync.WaitGroup) {
 	for i := 0; i < count; i++ {
 		l.Get(keys[i])
 	}
