@@ -59,6 +59,14 @@ func (l *Cache) RegisterPurger(purger Purger) {
 	l.purger = purger
 }
 
+func (l *Cache) RemoveAll() {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	for l.list.Len() > 0 {
+		l.expire()
+	}
+}
+
 // expire removes the oldest entry.  The mutex lock is already help by Set.
 func (l *Cache) expire() {
 	entry := l.list.Back()
