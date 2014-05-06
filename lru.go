@@ -18,6 +18,7 @@ type lru struct {
 	expired uint
 	removes uint
 	logger  *log.Logger
+	purger  Purger
 }
 
 type Stats struct {
@@ -34,6 +35,11 @@ type cacheEntry struct {
 	value interface{}
 }
 
+// Optional interface for cached objects
+type Purger interface {
+	OnPurge(key string, value interface{})
+}
+
 // New creates a new LRU cache
 func New(limit uint) (*lru, error) {
 	if limit == 0 {
@@ -46,6 +52,13 @@ func New(limit uint) (*lru, error) {
 	return lru, nil
 }
 
+func (l *lru) RegisterPurger(purger Purger) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	l.purger = purger
+}
+
 // expire removes the oldest entry.  The mutex lock is already help by Set.
 func (l *lru) expire() {
 	entry := l.list.Back()
@@ -54,6 +67,9 @@ func (l *lru) expire() {
 		ce := entry.Value.(cacheEntry)
 		delete(l.data, ce.key)
 		l.list.Remove(entry)
+		if l.purger != nil {
+			l.purger.OnPurge(ce.key, entry.Value)
+		}
 	} else {
 		// shouldn't be here unless something else is wrong
 		l.logger.Printf("lru - nil entry when trying to remove, limit=%d len=%d\n", l.limit, l.list.Len())
@@ -118,6 +134,9 @@ func (l *lru) SetLogger(logger *log.Logger) {
 
 // Stats returns a stats structure containing information on the cache hits, misses, max size, current size, expired entries, and entries removed
 func (l *lru) Stats() Stats {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
 	return Stats{l.hits, l.misses, l.limit, uint(l.list.Len()), l.expired, l.removes}
 }
 
