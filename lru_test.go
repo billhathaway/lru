@@ -199,7 +199,7 @@ func Benchmark_GetNotFound(b *testing.B) {
 	}
 }
 
-func lruReader(count int, l *lru, wg *sync.WaitGroup) {
+func lruReader(count int, l *Cache, wg *sync.WaitGroup) {
 	for i := 0; i < count; i++ {
 		l.Get(keys[i])
 	}

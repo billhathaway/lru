@@ -1,4 +1,4 @@
-// lru project lru.go
+// Cache project Cache.go
 package lru
 
 import (
@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-type lru struct {
+type Cache struct {
 	data    map[string]*list.Element
 	list    *list.List
 	limit   uint
@@ -40,19 +40,19 @@ type Purger interface {
 	OnPurge(key string, value interface{})
 }
 
-// New creates a new LRU cache
-func New(limit uint) (*lru, error) {
+// New creates a new Cache cache
+func New(limit uint) (*Cache, error) {
 	if limit == 0 {
 		return nil, errors.New("limit must be positive")
 	}
-	lru := new(lru)
-	lru.data = make(map[string]*list.Element)
-	lru.list = list.New()
-	lru.limit = limit
-	return lru, nil
+	Cache := new(Cache)
+	Cache.data = make(map[string]*list.Element)
+	Cache.list = list.New()
+	Cache.limit = limit
+	return Cache, nil
 }
 
-func (l *lru) RegisterPurger(purger Purger) {
+func (l *Cache) RegisterPurger(purger Purger) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
@@ -60,7 +60,7 @@ func (l *lru) RegisterPurger(purger Purger) {
 }
 
 // expire removes the oldest entry.  The mutex lock is already help by Set.
-func (l *lru) expire() {
+func (l *Cache) expire() {
 	entry := l.list.Back()
 	if entry != nil {
 		l.expired++
@@ -68,18 +68,18 @@ func (l *lru) expire() {
 		delete(l.data, ce.key)
 		l.list.Remove(entry)
 		if l.purger != nil {
-			l.purger.OnPurge(ce.key, entry.Value)
+			l.purger.OnPurge(ce.key, ce.value)
 		}
 	} else {
 		// shouldn't be here unless something else is wrong
-		l.logger.Printf("lru - nil entry when trying to remove, limit=%d len=%d\n", l.limit, l.list.Len())
+		l.logger.Printf("Cache - nil entry when trying to remove, limit=%d len=%d\n", l.limit, l.list.Len())
 	}
 }
 
 // Set adds the value and sets it to the head of the list.
 // If the key was already present, the entry is updated and the previous value is returned.
 // If the key was not already present, nil is returned
-func (l *lru) Set(key string, val interface{}) interface{} {
+func (l *Cache) Set(key string, val interface{}) interface{} {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	for l.list.Len() >= int(l.limit) {
@@ -101,7 +101,7 @@ func (l *lru) Set(key string, val interface{}) interface{} {
 
 // Get returns the value if it exists and true, otherwise returns nil and false
 // the entry is moved to the front of the list if it is found
-func (l *lru) Get(key string) (interface{}, bool) {
+func (l *Cache) Get(key string) (interface{}, bool) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	if entry, found := l.data[key]; found {
@@ -115,7 +115,7 @@ func (l *lru) Get(key string) (interface{}, bool) {
 }
 
 // Remove removes a key, returning true if the key was found, false if it was not
-func (l *lru) Remove(key string) bool {
+func (l *Cache) Remove(key string) bool {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	l.removes++
@@ -128,12 +128,12 @@ func (l *lru) Remove(key string) bool {
 }
 
 // SetLogger sets the logger.  There is currently only a single log statement in the package.
-func (l *lru) SetLogger(logger *log.Logger) {
+func (l *Cache) SetLogger(logger *log.Logger) {
 	l.logger = logger
 }
 
 // Stats returns a stats structure containing information on the cache hits, misses, max size, current size, expired entries, and entries removed
-func (l *lru) Stats() Stats {
+func (l *Cache) Stats() Stats {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
@@ -141,7 +141,7 @@ func (l *lru) Stats() Stats {
 }
 
 // ResetStats resets the hit,misses, and expired counters
-func (l *lru) ResetStats() {
+func (l *Cache) ResetStats() {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	l.hits = 0
@@ -152,17 +152,17 @@ func (l *lru) ResetStats() {
 }
 
 // Limit returns the maximum number of entries that may be kept in the cache
-func (l *lru) Limit() uint {
+func (l *Cache) Limit() uint {
 	return l.limit
 }
 
 // Len returns the number of entries in the cache
-func (l *lru) Len() int {
+func (l *Cache) Len() int {
 	return l.list.Len()
 }
 
 // HitRate returns a number between 0.0 and 1.0 indicating the percentage of get calls that were found in the cache
-func (l *lru) HitRate() float32 {
+func (l *Cache) HitRate() float32 {
 	if l.hits == 0 {
 		return 0.0
 	}
